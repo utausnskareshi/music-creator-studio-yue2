@@ -1,0 +1,16 @@
+[project]
+name = "mcs_yue2_nodes"
+description = "Helper nodes for Music Creator Studio YuE2 (32-bit float WAV saver, audio info, vocal separation, lyric alignment, YuE2 status)."
+version = "0.2.0"
+license = { text = "Apache-2.0" }
+# torch / torchaudio / numpy come from ComfyUI core; the optional packages below are installed by the app.
+dependencies = []
+
+[project.optional-dependencies]
+separation = ["audio-separator==0.47.0"]
+align = ["pykakasi", "pypinyin"]
+align-multilingual = ["uroman==1.3.1.1"]
+
+[tool.comfy]
+PublisherId = "utausnskareshi"
+DisplayName = "MCS YuE2 Nodes"

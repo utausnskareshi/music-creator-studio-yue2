@@ -1,0 +1,114 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  # From a branch: build and test only, the installer becomes a workflow artifact (never a release asset, see below).
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One run per ref at a time: two runs of one tag would otherwise both miss its draft release and create two.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # The app version lives in package.json (tauri.conf.json reads it: "version": "../package.json"); the
+      # installer name, package_info().version and the failure / diagnostics reports all come from it. A tag push
+      # must name that version (Cargo.toml's [package] version is crate metadata, kept in step as well).
+      - name: Check the tag against the app version
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          node -e '
+            const fs = require("fs");
+            const v = require("./package.json").version;
+            const tag = process.env.GITHUB_REF_NAME.replace(/^v/, "");
+            const cargo = (/^\[package\][\s\S]*?^version\s*=\s*"([^"]+)"/m.exec(fs.readFileSync("src-tauri/Cargo.toml", "utf8")) || [])[1];
+            const bad = [];
+            if (tag !== v) bad.push(`tag ${tag} != package.json ${v}`);
+            if (cargo !== v) bad.push(`src-tauri/Cargo.toml ${cargo} != package.json ${v}`);
+            if (bad.length) { console.error(bad.join("\n")); process.exit(1); }
+            console.log(`version ${v} matches the tag`);
+          '
+
+      - name: Install dependencies
+        run: npm ci
+
+      # npm test = type check (app, tests, config files) + vitest.
+      # The ffmpeg integration tests in src-tauri/src/export.rs are SKIPPED in CI: the runner has no bundled ffmpeg
+      # (<data root>/runtime/ffmpeg), so each prints "SKIPPED (no ffmpeg under …)"; --nocapture keeps those lines in
+      # the log. They run on a development machine with the app's runtime installed. Do not set MCS_TEST_DATA_ROOT
+      # (or MCS_REQUIRE_FFMPEG=1) here without provisioning ffmpeg under that root: the tests then fail instead.
+      # The ComfyUI node-pack tests (npm run test:nodes) need ComfyUI's embedded Python and are not run in CI either;
+      # run them locally after changing comfy-nodes/.
+      # The tests that need a folder's permissions to refuse this account print "SKIPPED (this elevated program …)"
+      # where the runner's administrator is let in all the same (src-tauri/src/setup.rs, acl_for_tests).
+      # bash (-eo pipefail) stops at the first failing command; the default pwsh shell only checks the exit code of
+      # the last line, so a failing `npm test` would pass the step. A failure is also written to the run's annotations
+      # (::error::, up to 10), which can be read without signing in to GitHub, unlike this log.
+      - name: Unit tests
+        shell: bash
+        run: |
+          plain() { sed -E 's/\x1b\[[0-9;]*m//g' "$1"; }
+          annotate() { sed -E 's/%/%25/g; s/^/::error title=Unit tests::/' | head -n 10; }
+          npm test 2>&1 | tee npm-test.log || { plain npm-test.log | grep -E '(FAIL|×|Error:) ' | annotate; exit 1; }
+          cargo test --manifest-path src-tauri/Cargo.toml --lib -- --nocapture 2>&1 | tee cargo-test.log || { plain cargo-test.log | awk '/panicked at/ { l = $0; getline m; print l " " m; next } /^error/' | annotate; exit 1; }
+
+      # A tag push builds into that tag's draft release. A run from a branch passes no tag, so tauri-action only builds:
+      # the version's tag (v<package.json version>) would reuse the release of that version, draft or published, and
+      # replace its installer with a build of another commit.
+      - name: Build installer (and attach it to the tag's draft release)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: "Music Creator Studio YuE2 ${{ github.ref_name }}"
+          releaseBody: |
+            Windows 11 用インストーラーです。インストール後、初回起動時のセットアップで ComfyUI・YuE2 モデル・ffmpeg などをダウンロードします（約 20〜30GB）。
+            必要環境: NVIDIA GPU（推奨 24GB VRAM、INT8 モデルで 12GB〜）、ドライバ 580.88 以上。
+          releaseDraft: true
+          prerelease: false
+          args: --target x86_64-pc-windows-msvc --bundles nsis
+
+      # The uninstaller's file functions (src-tauri/windows/hooks.nsh) against fixture folders: a shipped uninstaller
+      # cannot be fixed by a later release (an upgrade runs the old version's uninstaller). Run after the build, whose
+      # NSIS bundle downloaded makensis to %LOCALAPPDATA%\tauri\NSIS (the harness's default -MakeNsis). A failure
+      # fails the job; on a tag push the installer is already in the draft release then: do not publish that draft.
+      - name: Uninstaller hooks test (NSIS)
+        shell: pwsh
+        # (the harness stops a test installer that hangs after 120 s; this bounds anything else)
+        timeout-minutes: 15
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/nsis_hooks_test.ps1
+          if ($LASTEXITCODE -ne 0) { Write-Host "tools/nsis_hooks_test.ps1 failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
+
+      - name: Keep the installer of a branch run (workflow artifact)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v6
+        with:
+          name: installer-${{ github.sha }}
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error

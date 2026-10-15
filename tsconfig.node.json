@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "vitest.config.ts", "tools/e2e/vitest.config.ts", "tools/kuromoji-dict-path.ts", "tools/kuromoji-dict-path.unit.test.ts", "tools/third-party-licenses.d.mts", "tools/third-party-licenses.unit.test.ts"]
+}

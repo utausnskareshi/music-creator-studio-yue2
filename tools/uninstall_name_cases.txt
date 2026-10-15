@@ -1,0 +1,60 @@
+# Names at the top of the folders where the uninstaller's tools prompt deletes only the app's own files
+# (comfy_input\mcs_uploads, comfy_output\mcs and mcs_sep), and whether the app names its files so ("gone") or not
+# ("kept": a user's export or diagnostic bundle saved there while the folder was the song folder, or a name that
+# only looks like the app's). Both sides read this list, so the uninstaller's copy of the rules cannot drift from
+# the app's (an uninstaller that has shipped cannot be fixed by a later release):
+# - tools/nsis_hooks_test.ps1 makes these files and checks hooks.nsh (McsIsStagedName, McsIsOutputName);
+# - src-tauri/src/lib.rs (test the_uninstallers_name_rules_are_the_apps) checks the app's own rules
+#   (comfy::client::is_staged_upload_name, is_comfy_output_name) with the same names.
+# Columns: folder (uploads | mcs | mcs_sep), verdict (gone | kept), name (the rest of the line; may hold spaces).
+# {uuid}: 32 lowercase hex digits; {a*N}: N times "a". Each limit of a rule has a case at it ("gone") and past it
+# ("kept"), so a rule made stricter or looser on either side fails a test.
+uploads  gone  0123456789abcdef_take.wav
+uploads  gone  fedcba9876543210_noext
+uploads  gone  0123456789abcdef_x.part
+uploads  gone  0123456789abcdef_Take_2-b.flac
+uploads  gone  0123456789abcdef_{a*39}_.wav
+uploads  gone  0123456789abcdef_take.wav.{uuid}.part
+uploads  gone  0123456789abcdef_noext.{uuid}.part
+uploads  gone  0123456789abcdef_song.abcdefgh
+uploads  gone  0123456789abcdef_{a*40}.wav
+uploads  kept  0123456789ABCDEF_other.wav
+uploads  kept  0123456789abcde_song.wav
+uploads  kept  x0123456789abcdef_song.wav
+uploads  kept  0123456789abcdef_
+uploads  kept  0123456789abcdef_my song.wav
+uploads  kept  0123456789abcdef_song.wav.part
+uploads  kept  0123456789abcdef_song.wav.0123.part
+uploads  kept  0123456789abcdef_song.wav.bak
+uploads  kept  0123456789abcdef_song.WAV
+uploads  kept  0123456789abcdef_song.abcdefghi
+uploads  kept  0123456789abcdef_song.tar.gz
+uploads  kept  0123456789abcdef_{a*41}.wav
+uploads  kept  0123456789abcdef_song.wav.0123456789ABCDEF0123456789abcdef.part
+uploads  kept  0123456789abcdef_song.wav.{uuid}0.part
+uploads  kept  0123456789abcdef_my song.wav.{uuid}.part
+uploads  kept  My Song.mp3
+uploads  kept  mcs-diagnostics-20261001_120000.zip
+mcs      gone  0123abcd_00001_.flac
+mcs      gone  0123ABCD_123456_.wav
+mcs      kept  0123abcd_0001_.flac
+mcs      kept  0123abc_00001_.flac
+mcs      kept  0123abcg_00001_.flac
+mcs      kept  0123abcd_00001_.mp3
+mcs      kept  0123abcd_00002.flac
+mcs      kept  0123abcd_00003_.FLAC
+mcs      kept  0123abcd_00a01_.wav
+mcs      kept  0123abcd__00004_.flac
+mcs      kept  x0123abcd_00005_.flac
+mcs      kept  0123abcd_00006_.flac.part
+mcs      kept  _00007_.wav
+mcs      kept  My Song.mp3
+mcs      kept  mcs-diagnostics-20261001_120000.zip
+mcs_sep  gone  89abcdef_vocals_00001_.wav
+mcs_sep  gone  89abcdef_instrumental_00002_.flac
+mcs_sep  kept  89abcdef_drums_00001_.wav
+mcs_sep  kept  89abcdef_vocals_0001_.wav
+mcs_sep  kept  89abcdef_VOCALS_00003_.wav
+mcs_sep  kept  89abcdef_vocals_.wav
+mcs_sep  kept  My Song.mp3
+mcs_sep  kept  mcs-diagnostics-20261001_120000.zip

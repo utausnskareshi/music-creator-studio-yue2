@@ -1,0 +1,25 @@
+Test fixtures (native YuE2 ABC; every file passes the official abc_tools.py inspect)
+
+full_en.abc, full_ja.abc, full_long.abc
+  Scores of songs YuE2 generated while this app was developed.
+melody_cover.abc
+  SheetSage2 transcription (melody) of a song YuE2 generated while this app was developed; no third-party
+  recording.
+plan_l32.abc
+  YuE2 plan (L:1/32 with odd durations) of a song this app generated (2026-09-28/104720).
+transcription_l16.abc
+  Score (L:1/16) of a song this app generated (2026-09-27/144709); no third-party recording.
+official_score.abc, official_melody.abc
+  examples/score.abc and examples/melody.abc of the official YuE2 repository
+  (https://github.com/multimodal-art-projection/YuE; Apache License 2.0, Copyright (c) 2026 the YuE2 authors;
+  full text in LICENSE-YuE2-Apache-2.0.txt, copied from the repository's LICENSE).
+official_example_ins.abc
+  skills/yue2-music/instrumental/assets/example-ins.abc of the official YuE2 repository
+  (MIT License, Copyright (c) 2026 yue2-music contributors; copyright and permission notice in
+  LICENSE-yue2-music-MIT.txt, copied from skills/yue2-music/instrumental/LICENSE). Contains an M:5/8 group.
+ss2_plain_melody.abc, ss2_plain_full.abc, ss2_pickup_key_melody.abc, ss2_pickup_key_full.abc,
+ss2_meter_melody.abc, ss2_meter_full.abc
+  Output of the official SheetSage2 -> ABC exporter of ComfyUI v0.37.0 (comfy/audio_encoders/sheetsage2_abc.py,
+  score_to_abc via events_to_abc) run on synthetic random events (seed 1, one melody-only and one full variant
+  each; 2026-09-28): no transcription of any recording. pickup_key_*: a pickup bar and a group-level K:Am at a
+  bar line; meter_*: an inline [K:Am] inside a bar and M:3/4 / M:1/4 / M:4/4 groups.

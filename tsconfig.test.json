@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src", "tools/e2e/*.ts", "tools/e2e/*.d.mts"],
+  "exclude": ["node_modules", "dist", "src-tauri", "tools/e2e/vitest.config.ts"]
+}

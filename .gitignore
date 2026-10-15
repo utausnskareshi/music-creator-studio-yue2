@@ -1,0 +1,12 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+*.log
+.DS_Store
+Thumbs.db
+public/kuromoji/
+__pycache__/
+*.tsbuildinfo
+# Claude Code's local settings and work copies
+.claude/
